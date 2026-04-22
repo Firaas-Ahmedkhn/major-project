@@ -5,18 +5,14 @@ import queue
 import pyttsx3
 from ultralytics import YOLO
 
-# ─────────────────────────────────────────────
+
 # Camera parameters
-# ─────────────────────────────────────────────
 IMAGE_W, IMAGE_H = 512, 512
 CX, CY = IMAGE_W // 2, IMAGE_H // 2
 V_FOV_RAD = math.radians(170)
 H_CM = 145  # camera height in cm
 
 
-# ─────────────────────────────────────────────
-# Object classification maps
-# ─────────────────────────────────────────────
 
 # How dangerous/urgent is each label? Lower = higher priority.
 OBJECT_PRIORITY = {
@@ -120,9 +116,8 @@ MOVING_OBJECTS  = {"person", "rider", "dog", "cow", "buffalo", "mule", "car",
                    "e-rickshaw", "rickshaw", "hand_cart"}
 
 
-# ─────────────────────────────────────────────
 # Distance urgency thresholds (in cm)
-# ─────────────────────────────────────────────
+
 URGENCY_THRESHOLDS = {
     "CRITICAL": 100,   # < 1 m  → immediate action
     "WARNING":  250,   # < 2.5 m
@@ -140,9 +135,7 @@ def get_urgency(distance_cm):
         return "INFO"
 
 
-# ─────────────────────────────────────────────
 # Lateral zone from bounding box center
-# ─────────────────────────────────────────────
 def get_lateral_zone(bbox_cx, frame_w):
     """Returns: 'left', 'center', or 'right'"""
     third = frame_w / 3
@@ -154,9 +147,7 @@ def get_lateral_zone(bbox_cx, frame_w):
         return "right"
 
 
-# ─────────────────────────────────────────────
 # Action suggestion logic
-# ─────────────────────────────────────────────
 def get_action(label, position, urgency):
     """
     Returns a short action string based on:
@@ -205,9 +196,7 @@ def get_action(label, position, urgency):
             return "proceed with caution"
 
 
-# ─────────────────────────────────────────────
 # Core phrase builder
-# ─────────────────────────────────────────────
 def build_phrase(label, position, distance_cm, urgency):
     """
     Builds a natural language navigation instruction.
@@ -245,9 +234,7 @@ def build_phrase(label, position, distance_cm, urgency):
     return phrase
 
 
-# ─────────────────────────────────────────────
 # Phrase deduplication / cooldown tracker
-# ─────────────────────────────────────────────
 class AnnouncementCooldown:
     """
     Prevents the same phrase from being repeated too frequently.
@@ -268,9 +255,7 @@ class AnnouncementCooldown:
         return False
 
 
-# ─────────────────────────────────────────────
 # TTS engine (runs in a background thread)
-# ─────────────────────────────────────────────
 class TTSEngine:
     """
     Wraps pyttsx3 in a background thread with a priority queue so that
@@ -304,17 +289,16 @@ class TTSEngine:
         self._q.join()
 
 
-# ─────────────────────────────────────────────
+
 # Horizon check
-# ─────────────────────────────────────────────
 def get_horizon_y(pitch_rad, roll_rad=1.0):
     horizon_y = 230
     return horizon_y
 
 
-# ─────────────────────────────────────────────
+
 # Distance estimation (below-horizon only)
-# ─────────────────────────────────────────────
+
 def calculate_distance(pixel_x, pixel_y, roll_rad, pitch_rad, h_cm):
     dx = pixel_x - CX
     dy = pixel_y - CY
@@ -329,9 +313,7 @@ def calculate_distance(pixel_x, pixel_y, roll_rad, pitch_rad, h_cm):
     return h_cm / math.tan(total_angle)
 
 
-# ─────────────────────────────────────────────
-# Main pipeline
-# ─────────────────────────────────────────────
+
 def run_navigation_assistant(source, roll_rad, pitch_rad, h_cm=H_CM,
                               max_announcements=3, tts_rate=145):
     """
@@ -428,9 +410,7 @@ def run_navigation_assistant(source, roll_rad, pitch_rad, h_cm=H_CM,
     tts.wait_until_done()
 
 
-# ─────────────────────────────────────────────
 # Run
-# ─────────────────────────────────────────────
 if __name__ == "__main__":
     run_navigation_assistant(
         source="/Users/firaaskhan/Desktop/majr/try.png",   # image path, video path, or 0 for webcam
@@ -440,28 +420,3 @@ if __name__ == "__main__":
         max_announcements=3,        # speak at most 3 warnings per frame
         tts_rate=145,               # slightly slower for clarity
     )
-
-
-# ─────────────────────────────────────────────
-# Example phrase outputs (for reference)
-# ─────────────────────────────────────────────
-"""
-CRITICAL examples:
-  "Danger! Pothole ahead, 65 centimetres. Stop and move aside."
-  "Danger! Person on your left, 80 centimetres. Move right immediately."
-  "Danger! Dog on your right, 90 centimetres. Move left immediately."
-
-WARNING examples:
-  "Warning. Open drain on your left, 1.8 metres. Move to your right."
-  "Warning. Auto-rickshaw ahead, 2 metres. Slow down and proceed carefully."
-  "Warning. Cow on your right, 2.2 metres. Move to your left."
-
-CAUTION examples:
-  "Speed bump ahead, 3.5 metres. Slow down."
-  "Person on your left, 4 metres. Keep right."
-  "Motorcycle on your right, 4.5 metres. Keep left."
-
-INFO / traffic signals:
-  "Red signal ahead, 6 metres. Stop."
-  "Green signal ahead, 5 metres. You may proceed."
-"""
